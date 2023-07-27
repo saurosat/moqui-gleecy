@@ -75,9 +75,9 @@
     <!-- Moqui Applications -->
     <component name="SimpleScreens" group="moqui" version="2.2.0" branch="master"/>
     <component name="HiveMind" group="moqui" version="1.5.0" branch="master"/>
-    <component name="PopCommerce" group="moqui" version="2.2.0" branch="master"/>
+    <component name="PopCommerce" group="saurosat" version="2.2.0" branch="master"/>
     <component name="MarbleERP" group="moqui" version="1.0.0" branch="master"/>
-    <component name="PopRestStore" group="moqui" version="1.1.0" branch="master"/>
+    <component name="PopRestStore" group="saurosat" version="1.1.0" branch="master"/>
     <component name="WeCreate" group="moqui" version="" branch="master"/><!-- no releases yet -->
     <!-- Moqui Web and Demo Sites -->
     <component name="moqui-org" group="moqui" version="" branch="master"/><!-- no releases -->
@@ -95,6 +95,9 @@
     <component name="OFBizToMantle" group="jonesde" version="" branch="master"/><!-- no releases -->
     <component name="ServiceJobMonitor" group="tailorsoft" version="" branch="master"/><!-- no releases -->
     <component name="Sales" group="xolvegroup" version="" branch="master"/><!-- no releases -->
+
+    <!-- Gleecy components -->
+    <component name="gleecy-import" group="gleecy" version="" branch="master"/><!-- no releases -->
 
     <!-- Component Sets -->
     <!-- NOTE: using these component sets is NOT recommended, with so many components doing
