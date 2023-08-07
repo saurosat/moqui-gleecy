@@ -75,9 +75,9 @@
     <default-property name="scheduled_job_check_time" value="60"/>
 
     <!-- ElasticSearch Client and Proxy Servlet settings -->
-    <default-property name="elasticsearch_url" value="http://127.0.0.1:9200"/>
-    <default-property name="elasticsearch_user" value=""/>
-    <default-property name="elasticsearch_password" value="" is-secret="true"/>
+    <default-property name="elasticsearch_url" value="https://127.0.0.1:9200"/>
+    <default-property name="elasticsearch_user" value="elastic"/>
+    <default-property name="elasticsearch_password" value="fZ*eauozXIT3doQcOeVx" is-secret="true"/>
     <default-property name="elasticsearch_index_prefix" value=""/>
     <!-- Kibana Proxy Servlet settings -->
     <default-property name="kibana_host" value="127.0.0.1"/>
@@ -536,7 +536,7 @@
         <load-data location="classpath://data/MoquiSetupData.xml"/>
     </entity-facade>
     <database-list>
-        <dictionary-type type="id" java-type="java.lang.String" default-sql-type="VARCHAR(40)"/>
+        <dictionary-type type="id" java-type="java.lang.String" default-sql-type="VARCHAR(50)"/>
         <dictionary-type type="id-long" java-type="java.lang.String" default-sql-type="VARCHAR(255)"/>
 
         <dictionary-type type="date" java-type="java.sql.Date" default-sql-type="DATE"/>

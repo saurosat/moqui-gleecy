@@ -14,29 +14,17 @@
 package org.moqui.impl.context
 
 import groovy.transform.CompileStatic
+import org.apache.commons.lang3.StringUtils
+import org.apache.shiro.authc.AuthenticationException
 import org.apache.shiro.authc.AuthenticationToken
 import org.apache.shiro.authc.ExpiredCredentialsException
-import org.moqui.context.PasswordChangeRequiredException
-
-import javax.websocket.server.HandshakeRequest
-import java.sql.Timestamp
-import javax.servlet.http.Cookie
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
-import javax.servlet.http.HttpSession
-
-import org.apache.shiro.authc.AuthenticationException
 import org.apache.shiro.authc.UsernamePasswordToken
 import org.apache.shiro.subject.Subject
 import org.apache.shiro.subject.support.DefaultSubjectContext
+import org.apache.shiro.web.session.HttpServletSession
 import org.apache.shiro.web.subject.WebSubjectContext
 import org.apache.shiro.web.subject.support.DefaultWebSubjectContext
-import org.apache.shiro.web.session.HttpServletSession
-
-import org.moqui.context.ArtifactExecutionInfo
-import org.moqui.context.AuthenticationRequiredException
-import org.moqui.context.SecondFactorRequiredException
-import org.moqui.context.UserFacade
+import org.moqui.context.*
 import org.moqui.entity.EntityCondition
 import org.moqui.entity.EntityList
 import org.moqui.entity.EntityValue
@@ -47,9 +35,16 @@ import org.moqui.impl.util.MoquiShiroRealm
 import org.moqui.util.MNode
 import org.moqui.util.StringUtilities
 import org.moqui.util.WebUtilities
-
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import javax.annotation.Nonnull
+import javax.servlet.http.Cookie
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
+import javax.servlet.http.HttpSession
+import javax.websocket.server.HandshakeRequest
+import java.sql.Timestamp
 
 @CompileStatic
 class UserFacadeImpl implements UserFacade {
@@ -917,8 +912,26 @@ class UserFacadeImpl implements UserFacade {
     }
     @Override String getClientIp() { return clientIpInternal }
 
-    // ========== UserInfo ==========
-
+    @Override
+    String getTenantId() { //Gleecy
+        return currentInfo.tenantId
+    }
+    @Override @Nonnull
+    String getTenantPrefix() {
+        if(tenantId == null) {
+            return "" //currentInfo.loggedInAnonymous ? "00000000" : "FFFFFFFF"
+        }
+        return getTenantPrefix(tenantId)
+    }
+    @Override @Nonnull
+    String getTenantPrefix(String tenantId) {
+        if(tenantId == null || tenantId.isEmpty() || tenantId == "_NA_") {
+            return ""
+        }
+        int hashCode = tenantId.hashCode()
+        return "P" + StringUtils.leftPad(Integer.toHexString(hashCode), 8, '0')
+    }
+// ========== UserInfo ==========
     UserInfo pushUserSubject(Subject subject) {
         UserInfo userInfo = pushUser((String) subject.getPrincipal())
         userInfo.subject = subject
@@ -1045,6 +1058,8 @@ class UserFacadeImpl implements UserFacade {
 
         boolean isPopulated() { return (username != null && username.length() > 0) || loggedInAnonymous }
 
+        String tenantId = (String) null
+
         void setInfo(String username) {
             // this shouldn't happen unless there is a bug in the framework
             if (isPopulated()) throw new IllegalStateException("Cannot set user info, UserInfo already populated")
@@ -1062,6 +1077,12 @@ class UserFacadeImpl implements UserFacade {
                 userAccount = ua
                 this.username = ua.username
                 userId = ua.userId
+                String partyId = (String) ua.partyId
+                EntityValue tenant = this.getUfi().eci.getEntity().getTopOwnerParty(partyId)
+                if(tenant != null) {
+                    this.tenantId = (String) tenant.getNoCheckSimple("partyId")
+                    System.out.println("setInfo(String username): username="+ username + ", tenantId=" + this.tenantId)
+                }
 
                 String localeStr = ua.locale
                 if (localeStr != null && localeStr.length() > 0) {

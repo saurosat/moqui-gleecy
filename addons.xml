@@ -97,7 +97,7 @@
     <component name="Sales" group="xolvegroup" version="" branch="master"/><!-- no releases -->
 
     <!-- Gleecy components -->
-    <component name="gleecy-import" group="gleecy" version="" branch="master"/><!-- no releases -->
+    <component name="gleecy-import" group="saurosat" version="" branch="master"/><!-- no releases -->
 
     <!-- Component Sets -->
     <!-- NOTE: using these component sets is NOT recommended, with so many components doing

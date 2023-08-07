@@ -378,7 +378,7 @@ class MoquiShiroRealm implements Realm, Authorizer {
 
     void checkPermission(PrincipalCollection principalCollection, String permission) {
         String username = (String) principalCollection.primaryPrincipal
-        if (UserFacadeImpl.hasPermission(username, permission, null, ecfi.getEci())) {
+        if (UserFacadeImpl.hasPermission(username, permission, null, ecfi.getEci())) { //TODO Gleecy CodeReview is it a bug??
             throw new UnauthorizedException(ecfi.resource.expand('User ${username} does not have permission ${permission}','',[username:username,permission:permission]))
         }
     }

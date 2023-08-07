@@ -14,10 +14,10 @@
 package org.moqui.impl.entity;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
 import org.moqui.Moqui;
 import org.moqui.context.ArtifactExecutionInfo;
 import org.moqui.context.ExecutionContext;
+import org.moqui.context.UserFacade;
 import org.moqui.entity.EntityException;
 import org.moqui.entity.EntityFind;
 import org.moqui.entity.EntityList;
@@ -38,11 +38,8 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.Writer;
 import java.math.BigDecimal;
-import java.sql.SQLException;
-import java.sql.Connection;
 import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.*;
 
 public abstract class EntityValueBase implements EntityValue {
@@ -532,19 +529,61 @@ public abstract class EntityValueBase implements EntityValue {
         return this;
     }
 
+    private EntityValue tryGetRelatedParty(String fieldName, EntityFacadeImpl efi) {
+        Object value = this.getNoCheckSimple(fieldName);
+        if(!(value instanceof String)) {
+            return null;
+        }
+        String partyId = (String) value;
+        return efi.getTopOwnerParty(partyId);
+    }
+    private EntityValue tryGetRelatedParty(String[] fieldNames, EntityFacadeImpl efi) {
+        EntityValue party = null;
+        for(int i = 0; i < fieldNames.length && party == null; i++) {
+            party = tryGetRelatedParty(fieldNames[i], efi);
+        }
+        return party;
+    }
     @Override
     public EntityValue setSequencedIdPrimary() {
         EntityDefinition ed = getEntityDefinition();
         EntityFacadeImpl localEfi = getEntityFacadeImpl();
+        String sequenceValue = localEfi.sequencedIdPrimaryEd(ed);
 
         // get the entity-specific prefix, support string expansion for it too
         String entityPrefix = null;
         String rawPrefix = ed.entityInfo.sequencePrimaryPrefix;
         if (rawPrefix != null && rawPrefix.length() > 0)
             entityPrefix = localEfi.ecfi.resourceFacade.expand(rawPrefix, null, valueMapInternal);
-        String sequenceValue = localEfi.sequencedIdPrimaryEd(ed);
+        if(entityPrefix != null) {
+            sequenceValue = entityPrefix + sequenceValue;
+        }
+        //Gleecy: set prefix for tenants
+        UserFacade uf = localEfi.ecfi.getExecutionContext().getUser();
+        String tenantPrefix = uf.getTenantPrefix();
+        if(tenantPrefix.isEmpty()) {
+            EntityValue ownerParty = tryGetRelatedParty(
+                    new String[]{"ownerPartyId", "partyId"}, localEfi);
+            if(ownerParty != null) {
+                String partyId = (String) ownerParty.getNoCheckSimple("partyId");
+                tenantPrefix = uf.getTenantPrefix(partyId);
+                System.out.println("PartyId from known fields: " + partyId + ", prefix: " + tenantPrefix);
+            } else { // get tenant prefix from related entity
+                List<String> relFieldNames = ed.getAllRel1Fields(true);
+                for(String relFieldName : relFieldNames) {
+                    String relId = (String) this.getNoCheckSimple(relFieldName);
+                    if(relId != null && relId.length() > 9 && relId.startsWith("P")) {
+                        tenantPrefix = relId.substring(0, 9);
+                        System.out.println("Prefix from relation: " + relFieldName + ", prefix: " + tenantPrefix);
+                        break;
+                    }
+                }
+            }
+        }
+        System.out.println("Tenant prefix : " + tenantPrefix + ", Entity: " + ed.getFullEntityName());
+        sequenceValue = tenantPrefix + sequenceValue;
 
-        putKnownField(ed.entityInfo.pkFieldInfoArray[0], entityPrefix != null ? entityPrefix + sequenceValue : sequenceValue);
+        putKnownField(ed.entityInfo.pkFieldInfoArray[0], sequenceValue);
         return this;
     }
 

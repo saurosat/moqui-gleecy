@@ -150,6 +150,10 @@ class EntityAutoServiceRunner implements ServiceRunner {
             } else {
                 // if it has a default value don't sequence the PK
                 if (singlePkField.defaultStr == null || singlePkField.defaultStr.isEmpty()) {
+                    //Gleecy:
+                    newEntityValue.setFields(parameters, false, null, false)
+                    //end Gleecy
+
                     newEntityValue.setSequencedIdPrimary()
                     pkValue = newEntityValue.getNoCheckSimple(singlePkField.name)
                 }

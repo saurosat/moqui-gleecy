@@ -15,30 +15,23 @@ package org.moqui.impl.entity
 
 import groovy.transform.CompileStatic
 import org.moqui.BaseArtifactException
-import org.moqui.entity.EntityFind
-import org.moqui.impl.context.ExecutionContextImpl
-import org.moqui.impl.entity.condition.ConditionAlias
-import org.moqui.impl.entity.condition.DateCondition
-import org.moqui.util.LiteStringMap
-import org.moqui.util.ObjectUtilities
-import org.moqui.util.StringUtilities
-
-import javax.cache.Cache
-import java.sql.Timestamp
-
 import org.moqui.entity.EntityCondition
 import org.moqui.entity.EntityCondition.JoinOperator
 import org.moqui.entity.EntityException
+import org.moqui.entity.EntityFind
 import org.moqui.entity.EntityValue
-import org.moqui.impl.entity.condition.EntityConditionImplBase
-import org.moqui.impl.entity.condition.ConditionField
-import org.moqui.impl.entity.condition.FieldValueCondition
-import org.moqui.impl.entity.condition.FieldToFieldCondition
+import org.moqui.impl.context.ExecutionContextImpl
 import org.moqui.impl.entity.EntityJavaUtil.RelationshipInfo
+import org.moqui.impl.entity.condition.*
+import org.moqui.util.LiteStringMap
 import org.moqui.util.MNode
-
+import org.moqui.util.ObjectUtilities
+import org.moqui.util.StringUtilities
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import javax.cache.Cache
+import java.sql.Timestamp
 
 @CompileStatic
 class EntityDefinition {
@@ -1199,6 +1192,20 @@ class EntityDefinition {
         } else {
             return entityInfo.datasourceFactory.makeEntityValue(fullEntityName)
         }
+    }
+
+    List<String> getAllRel1Fields() {
+        return getAllRel1Fields(false)
+    }
+    List<String> getAllRel1Fields(boolean privateOnly) {
+        ArrayList<String> relFields = new ArrayList<>();
+        ArrayList<RelationshipInfo> relInfos = getRelationshipsInfo(false)
+        for(RelationshipInfo relInfo : relInfos) {
+            if(!relInfo.isTypeOne) continue
+            if(privateOnly && relInfo.relatedEntityName.startsWith("moqui")) continue
+            relFields.addAll(relInfo.keyFieldList)
+        }
+        return relFields
     }
 
     @Override

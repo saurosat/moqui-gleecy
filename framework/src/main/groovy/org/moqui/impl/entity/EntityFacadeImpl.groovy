@@ -18,25 +18,16 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 import org.moqui.BaseArtifactException
 import org.moqui.BaseException
 import org.moqui.context.ArtifactExecutionInfo
+import org.moqui.entity.*
 import org.moqui.etl.SimpleEtl
-import org.moqui.impl.context.ArtifactExecutionInfoImpl
-import org.moqui.impl.context.ExecutionContextImpl
+import org.moqui.impl.context.*
+import org.moqui.impl.entity.EntityJavaUtil.RelationshipInfo
 import org.moqui.impl.entity.condition.EntityConditionImplBase
 import org.moqui.impl.entity.condition.FieldValueCondition
 import org.moqui.impl.entity.condition.ListCondition
 import org.moqui.impl.service.runner.EntityAutoServiceRunner
 import org.moqui.resource.ResourceReference
-import org.moqui.entity.*
-import org.moqui.impl.context.ArtifactExecutionFacadeImpl
-import org.moqui.impl.context.ExecutionContextFactoryImpl
-import org.moqui.impl.context.TransactionFacadeImpl
-import org.moqui.impl.entity.EntityJavaUtil.RelationshipInfo
-import org.moqui.util.CollectionUtilities
-import org.moqui.util.LiteStringMap
-import org.moqui.util.MNode
-import org.moqui.util.ObjectUtilities
-import org.moqui.util.StringUtilities
-import org.moqui.util.SystemBinding
+import org.moqui.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Element
@@ -47,13 +38,7 @@ import javax.sql.XAConnection
 import javax.sql.XADataSource
 import java.math.RoundingMode
 import java.sql.*
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.ThreadLocalRandom
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -2309,4 +2294,30 @@ class EntityFacadeImpl implements EntityFacade {
         return qsl
     }
     void clearQueryStats() { queryStatsInfoMap.clear() }
+
+    /**
+     * Used by Gleecy
+     * @param partyId
+     * @return
+     */
+    @Override
+    EntityValue getTopOwnerParty(String partyId) {
+        if(partyId == null || partyId.isEmpty() || partyId == "_NA_") {
+            return null
+        }
+        EntityValue party = this.find("mantle.party.Party")
+                .condition("partyId", partyId)
+                .useCache(true)
+                .disableAuthz().one()
+        if(party == null) {
+            return null
+        }
+        String ownerPartyId = (String) party.getNoCheckSimple("ownerPartyId")
+        if(ownerPartyId == null || ownerPartyId.isEmpty() || ownerPartyId.equals("_NA_") || ownerPartyId.equals(partyId)) {
+            return party;
+        }
+        EntityValue ownerParty = getTopOwnerParty(ownerPartyId)
+        return ownerParty != null ? ownerParty : party
+    }
+
 }

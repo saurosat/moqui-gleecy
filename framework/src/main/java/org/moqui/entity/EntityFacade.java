@@ -13,16 +13,16 @@
  */
 package org.moqui.entity;
 
+import org.moqui.etl.SimpleEtl;
+import org.moqui.util.MNode;
+import org.w3c.dom.Element;
+
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-
-import org.moqui.etl.SimpleEtl;
-import org.moqui.util.MNode;
-import org.w3c.dom.Element;
 
 /** The main interface for general database operations in Moqui. */
 @SuppressWarnings("unused")
@@ -176,5 +176,11 @@ public interface EntityFacade {
      */
     EntityValue makeValue(Element element);
 
+    /**
+     * used by Gleecy
+     * @param partyId
+     * @return
+     */
+    EntityValue getTopOwnerParty(String partyId);
     Calendar getCalendarForTzLc();
 }

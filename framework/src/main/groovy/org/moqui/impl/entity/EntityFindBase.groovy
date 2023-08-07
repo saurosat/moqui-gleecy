@@ -17,17 +17,13 @@ import groovy.transform.CompileStatic
 import org.moqui.BaseException
 import org.moqui.context.ArtifactAuthorizationException
 import org.moqui.context.ArtifactExecutionInfo
+import org.moqui.context.UserFacade
 import org.moqui.entity.*
 import org.moqui.etl.SimpleEtl
 import org.moqui.etl.SimpleEtl.StopException
-import org.moqui.impl.context.ArtifactExecutionFacadeImpl
-import org.moqui.impl.context.ArtifactExecutionInfoImpl
-import org.moqui.impl.context.ContextJavaUtil
-import org.moqui.impl.context.ExecutionContextImpl
-import org.moqui.impl.context.TransactionCache
-import org.moqui.impl.context.TransactionFacadeImpl
-import org.moqui.impl.entity.condition.*
+import org.moqui.impl.context.*
 import org.moqui.impl.entity.EntityJavaUtil.FieldOrderOptions
+import org.moqui.impl.entity.condition.*
 import org.moqui.util.CollectionUtilities
 import org.moqui.util.MNode
 import org.moqui.util.ObjectUtilities
@@ -88,13 +84,18 @@ abstract class EntityFindBase implements EntityFind {
 
     protected ArrayList<String> queryTextList = new ArrayList<>()
 
-
     EntityFindBase(EntityFacadeImpl efi, String entityName) {
         this.efi = efi
         this.entityName = entityName
         TransactionFacadeImpl tfi = efi.ecfi.transactionFacade
         txCache = tfi.getTransactionCache()
         // if (!tfi.isTransactionInPlace()) logger.warn("No transaction in place, creating find for entity ${entityName}")
+        //For Gleecy:
+        if(efi.isEntityDefined(entityName)) {
+            this.entityDef = getEntityDef()
+            addPrefixConditions()
+        }
+        //... End Gleecy
     }
     EntityFindBase(EntityFacadeImpl efi, EntityDefinition ed) {
         this.efi = efi
@@ -102,6 +103,39 @@ abstract class EntityFindBase implements EntityFind {
         entityDef = ed
         TransactionFacadeImpl tfi = efi.ecfi.transactionFacade
         txCache = tfi.getTransactionCache()
+        //For Gleecy:
+        addPrefixConditions()
+        //... End Gleecy
+    }
+    /**
+     * For used by Gleecy, to support MUlti-tenant
+     * Allow
+     */
+    private void addPrefixConditions() {
+        if(entityDef.getFullEntityName().startsWith("moqui")) {
+            return
+        }
+        UserFacade userFacade = efi.ecfi.getEci().getUser()
+        String tenantId = userFacade.getTenantId()
+        String tenantPrefix = userFacade.getTenantPrefix(tenantId) + "%"
+        for(String pkFieldName : entityDef.getPkFieldNames()) {
+            FieldInfo pkField = entityDef.getFieldInfo(pkFieldName)
+            if(pkField.type != "id") {
+                continue
+            }
+            ConditionField condField = new ConditionField(pkField)
+            List<EntityConditionImplBase> conditions = new ArrayList<>(2)
+            if(entityName == "mantle.party.Party" || entityName == "mantle.party.Organization" || entityName == "mantle.party.Person") {
+                conditions.add(new FieldValueCondition(condField, EntityCondition.EQUALS, tenantId)) //TenantIDs do not started with 'P'
+                conditions.add(new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix)) //parties belong to tenant starts with 'P'
+                condition(new ListCondition(conditions, EntityCondition.OR))
+            } else {
+                conditions.add(new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix)) //parties belong to tenant starts with 'P'
+                //Tenant-private entities have ID start with 'P':
+                conditions.add(new FieldValueCondition(condField, EntityCondition.NOT_LIKE, "P%"))
+                condition(new ListCondition(conditions, EntityCondition.OR))
+            }
+        }
     }
 
     @Override EntityFind entity(String name) { entityName = name; return this }

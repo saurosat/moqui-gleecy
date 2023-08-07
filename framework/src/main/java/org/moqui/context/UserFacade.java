@@ -15,6 +15,7 @@ package org.moqui.context;
 
 import org.moqui.entity.EntityValue;
 
+import javax.annotation.Nonnull;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -147,4 +148,11 @@ public interface UserFacade {
     String getVisitorId();
     /** @return Client IP address from HTTP request or the configured client IP header (like X-Forwarded-For) */
     String getClientIp();
+
+    //Gleecy:
+    String getTenantId();
+    @Nonnull
+    String getTenantPrefix();
+    String getTenantPrefix(String tenantPartyId);
+    //End Gleecy
 }
