@@ -16,18 +16,17 @@ package org.moqui.impl.entity;
 import org.moqui.BaseArtifactException;
 import org.moqui.entity.EntityCondition;
 import org.moqui.entity.EntityException;
+import org.moqui.impl.entity.condition.BasicJoinCondition;
 import org.moqui.impl.entity.condition.EntityConditionImplBase;
 import org.moqui.impl.entity.EntityJavaUtil.FieldOrderOptions;
+import org.moqui.impl.entity.condition.FieldValueCondition;
 import org.moqui.util.MNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class EntityFindBuilder extends EntityQueryBuilder {
     private static final Logger logger = LoggerFactory.getLogger(EntityFindBuilder.class);
@@ -395,14 +394,47 @@ public class EntityFindBuilder extends EntityQueryBuilder {
             // localBuilder.append(sanitizeColumnName(relatedLinkEntityDefinition.getColumnName(relatedFieldName, false)))
         }
 
+        //Gleecy
+        List<BasicJoinCondition> conditions = this.entityFindBase.getPrefixConditions(linkEntityDefinition);
+        MNode econditions = new MNode("entity-condition", null);
+        if(!conditions.isEmpty()) {
+            MNode entityCondition = new MNode("entity-condition", null);
+            Map<String, String> orMap = Map.of("combine", "or");
+            for(BasicJoinCondition condition : conditions) {
+                MNode eConds = new MNode("econditions", orMap);
+                FieldValueCondition c = (FieldValueCondition) condition.getLhs();
+                eConds.append(new MNode("econdition",
+                        Map.of("field-name", c.getFieldName(),
+                                "value", (String) c.getValue(),
+                                "operator", getOperatorStr(c.getOperator()))));
+                c = (FieldValueCondition) condition.getRhs();
+                eConds.append(new MNode("econdition",
+                        Map.of("field-name", c.getFieldName(),
+                                "value", (String) c.getValue(),
+                                "operator", getOperatorStr(c.getOperator()))));
+                econditions.append(eConds);
+            }
+        }
         if (entityConditionList != null && entityConditionList.size() > 0) {
             // add any additional manual conditions for the member-entity view link here
             MNode entityCondition = entityConditionList.get(0);
+            econditions.appendAll(entityCondition.getChildren(), true);
+        }
+        if(!econditions.isEmpty()) {
             // logger.warn("======== appendJoinConditions() localEntityDefinition " + localEntityDefinition.fullEntityName + " linkEntityDefinition " + linkEntityDefinition.fullEntityName + " relatedLinkEntityDefinition " + relatedLinkEntityDefinition.fullEntityName);
-            EntityConditionImplBase linkEcib = localEntityDefinition.makeViewListCondition(entityCondition, relatedMemberEntityNode);
+            EntityConditionImplBase linkEcib = localEntityDefinition.makeViewListCondition(econditions, relatedMemberEntityNode);
             if (keyMapsSize > 0) localBuilder.append(" AND ");
             // TODO: does this need to use localBuilder? seems to be working so far...
             linkEcib.makeSqlWhere(this, null);
+        }
+        //Gleecy
+    }
+    private String getOperatorStr(EntityCondition.ComparisonOperator opt) {
+        switch (opt) {
+            case LIKE: return "like";
+            case EQUALS: return "equals";
+            case NOT_LIKE: return "not-like";
+            default: return "equals";
         }
     }
 

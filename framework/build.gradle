@@ -149,6 +149,9 @@ dependencies {
     // Jetty HTTP Client and Proxy Servlet
     api 'org.eclipse.jetty:jetty-client:10.0.15' // Apache 2.0
     api 'org.eclipse.jetty:jetty-proxy:10.0.15' // Apache 2.0
+//    implementation 'org.eclipse.jetty.http2:http2-client:10.0.15' // Jetty HTTP 2 Client
+    // https://mvnrepository.com/artifact/org.eclipse.jetty.http2/http2-http-client-transport
+    implementation group: 'org.eclipse.jetty.http2', name: 'http2-http-client-transport', version: '10.0.15'
 
     // javax.mail
     // NOTE: javax.mail depends on 'javax.activation:activation' which is the old package for 'javax.activation:javax.activation-api' used by jaxb-api

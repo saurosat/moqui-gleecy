@@ -153,6 +153,5 @@ public interface UserFacade {
     String getTenantId();
     @Nonnull
     String getTenantPrefix();
-    String getTenantPrefix(String tenantPartyId);
     //End Gleecy
 }

@@ -529,21 +529,38 @@ public abstract class EntityValueBase implements EntityValue {
         return this;
     }
 
-    private EntityValue tryGetRelatedParty(String fieldName, EntityFacadeImpl efi) {
-        Object value = this.getNoCheckSimple(fieldName);
-        if(!(value instanceof String)) {
-            return null;
+    private String getTenantPrefix(List<String> fieldNames) {
+        String tenantPrefix = "";
+        for(String fName : fieldNames) {
+            String fValue = (String) valueMapInternal.get(fName);
+            if(fValue == null || fValue.isEmpty()) {
+                continue;
+            }
+            if(fValue.length() > 9 && fValue.startsWith("P")) {
+                tenantPrefix = fValue.substring(0, 9);
+                break;
+            }
+            if (fName.equals("ownerPartyId")
+                    || fName.equals("partyId")
+                    || fName.equals("organizationPartyId") ) {
+                tenantPrefix = EntityJavaUtil.getTenantPrefix(fValue);
+                break;
+            }
         }
-        String partyId = (String) value;
-        return efi.getTopOwnerParty(partyId);
+        return tenantPrefix;
     }
-    private EntityValue tryGetRelatedParty(String[] fieldNames, EntityFacadeImpl efi) {
-        EntityValue party = null;
-        for(int i = 0; i < fieldNames.length && party == null; i++) {
-            party = tryGetRelatedParty(fieldNames[i], efi);
+    @Override
+    public String getTenantPrefix() {
+        EntityDefinition ed = getEntityDefinition();
+        //Get from PKs:
+        String tenantPrefix = getTenantPrefix(ed.getPkFieldNames());
+        if(tenantPrefix.isEmpty()) {
+            // Get from FKs:
+            tenantPrefix = getTenantPrefix(ed.getAllRel1Fields(true));
         }
-        return party;
+        return tenantPrefix;
     }
+
     @Override
     public EntityValue setSequencedIdPrimary() {
         EntityDefinition ed = getEntityDefinition();
@@ -559,28 +576,15 @@ public abstract class EntityValueBase implements EntityValue {
             sequenceValue = entityPrefix + sequenceValue;
         }
         //Gleecy: set prefix for tenants
-        UserFacade uf = localEfi.ecfi.getExecutionContext().getUser();
-        String tenantPrefix = uf.getTenantPrefix();
+        // get tenant prefix from related entity
+        String tenantPrefix = getTenantPrefix();
         if(tenantPrefix.isEmpty()) {
-            EntityValue ownerParty = tryGetRelatedParty(
-                    new String[]{"ownerPartyId", "partyId"}, localEfi);
-            if(ownerParty != null) {
-                String partyId = (String) ownerParty.getNoCheckSimple("partyId");
-                tenantPrefix = uf.getTenantPrefix(partyId);
-                System.out.println("PartyId from known fields: " + partyId + ", prefix: " + tenantPrefix);
-            } else { // get tenant prefix from related entity
-                List<String> relFieldNames = ed.getAllRel1Fields(true);
-                for(String relFieldName : relFieldNames) {
-                    String relId = (String) this.getNoCheckSimple(relFieldName);
-                    if(relId != null && relId.length() > 9 && relId.startsWith("P")) {
-                        tenantPrefix = relId.substring(0, 9);
-                        System.out.println("Prefix from relation: " + relFieldName + ", prefix: " + tenantPrefix);
-                        break;
-                    }
-                }
-            }
+            //get tenant prefix of current login user:
+            UserFacade uf = localEfi.ecfi.getExecutionContext().getUser();
+            tenantPrefix = uf.getTenantPrefix();
         }
-        System.out.println("Tenant prefix : " + tenantPrefix + ", Entity: " + ed.getFullEntityName());
+
+        //System.out.println("Tenant prefix : " + tenantPrefix + ", Entity: " + ed.getFullEntityName());
         sequenceValue = tenantPrefix + sequenceValue;
 
         putKnownField(ed.entityInfo.pkFieldInfoArray[0], sequenceValue);

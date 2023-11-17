@@ -33,6 +33,8 @@ public interface EntityValue extends Map<String, Object>, Externalizable, Compar
     String getEntityName();
     String getEntityNamePretty();
 
+    String getTenantPrefix();
+
     /** Returns true if any field has been modified */
     boolean isModified();
     /** Returns true if the field has been modified */

@@ -93,7 +93,11 @@ abstract class EntityFindBase implements EntityFind {
         //For Gleecy:
         if(efi.isEntityDefined(entityName)) {
             this.entityDef = getEntityDef()
-            addPrefixConditions()
+            if(!entityDef.isViewEntity) {
+                for(EntityCondition condition : getPrefixConditions(entityDef)) {
+                    this.condition(condition);
+                }
+            }
         }
         //... End Gleecy
     }
@@ -104,38 +108,45 @@ abstract class EntityFindBase implements EntityFind {
         TransactionFacadeImpl tfi = efi.ecfi.transactionFacade
         txCache = tfi.getTransactionCache()
         //For Gleecy:
-        addPrefixConditions()
+        if(!entityDef.isViewEntity) {
+            for(EntityCondition condition : getPrefixConditions(entityDef)) {
+                this.condition(condition);
+            }
+        }
         //... End Gleecy
     }
     /**
      * For used by Gleecy, to support MUlti-tenant
      * Allow
      */
-    private void addPrefixConditions() {
+    List<BasicJoinCondition> getPrefixConditions(EntityDefinition entityDef) {
+        List<BasicJoinCondition> conditions = new ArrayList<>()
         if(entityDef.getFullEntityName().startsWith("moqui")) {
-            return
+            return conditions;
         }
         UserFacade userFacade = efi.ecfi.getEci().getUser()
         String tenantId = userFacade.getTenantId()
-        String tenantPrefix = userFacade.getTenantPrefix(tenantId) + "%"
+        if(tenantId == null || tenantId.isBlank()) {
+            return conditions;
+        }
+        String tenantPrefix = EntityJavaUtil.getTenantPrefix(tenantId) + "%"
         for(String pkFieldName : entityDef.getPkFieldNames()) {
             FieldInfo pkField = entityDef.getFieldInfo(pkFieldName)
             if(pkField.type != "id") {
                 continue
             }
             ConditionField condField = new ConditionField(pkField)
-            List<EntityConditionImplBase> conditions = new ArrayList<>(2)
+            EntityCondition prefixedCondition = new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix);
             if(entityName == "mantle.party.Party" || entityName == "mantle.party.Organization" || entityName == "mantle.party.Person") {
-                conditions.add(new FieldValueCondition(condField, EntityCondition.EQUALS, tenantId)) //TenantIDs do not started with 'P'
-                conditions.add(new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix)) //parties belong to tenant starts with 'P'
-                condition(new ListCondition(conditions, EntityCondition.OR))
+                conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.EQUALS, tenantId),
+                        EntityCondition.JoinOperator.OR, prefixedCondition));
             } else {
-                conditions.add(new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix)) //parties belong to tenant starts with 'P'
                 //Tenant-private entities have ID start with 'P':
-                conditions.add(new FieldValueCondition(condField, EntityCondition.NOT_LIKE, "P%"))
-                condition(new ListCondition(conditions, EntityCondition.OR))
+                conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.NOT_LIKE, "P%"),
+                        EntityCondition.JoinOperator.OR, prefixedCondition));
             }
         }
+        return conditions;
     }
 
     @Override EntityFind entity(String name) { entityName = name; return this }

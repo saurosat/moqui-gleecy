@@ -29,6 +29,7 @@ import org.moqui.entity.EntityCondition
 import org.moqui.entity.EntityList
 import org.moqui.entity.EntityValue
 import org.moqui.impl.context.ArtifactExecutionInfoImpl.ArtifactAuthzCheck
+import org.moqui.impl.entity.EntityJavaUtil
 import org.moqui.impl.entity.EntityValueBase
 import org.moqui.impl.screen.ScreenUrlInfo
 import org.moqui.impl.util.MoquiShiroRealm
@@ -921,15 +922,7 @@ class UserFacadeImpl implements UserFacade {
         if(tenantId == null) {
             return "" //currentInfo.loggedInAnonymous ? "00000000" : "FFFFFFFF"
         }
-        return getTenantPrefix(tenantId)
-    }
-    @Override @Nonnull
-    String getTenantPrefix(String tenantId) {
-        if(tenantId == null || tenantId.isEmpty() || tenantId == "_NA_") {
-            return ""
-        }
-        int hashCode = tenantId.hashCode()
-        return "P" + StringUtils.leftPad(Integer.toHexString(hashCode), 8, '0')
+        return EntityJavaUtil.getTenantPrefix(tenantId)
     }
 // ========== UserInfo ==========
     UserInfo pushUserSubject(Subject subject) {
@@ -1079,9 +1072,8 @@ class UserFacadeImpl implements UserFacade {
                 userId = ua.userId
                 String partyId = (String) ua.partyId
                 EntityValue tenant = this.getUfi().eci.getEntity().getTopOwnerParty(partyId)
-                if(tenant != null) {
+                if(tenant != null && tenant.getNoCheckSimple("partyTypeEnumId") == "PtyOrganization") {
                     this.tenantId = (String) tenant.getNoCheckSimple("partyId")
-                    System.out.println("setInfo(String username): username="+ username + ", tenantId=" + this.tenantId)
                 }
 
                 String localeStr = ua.locale

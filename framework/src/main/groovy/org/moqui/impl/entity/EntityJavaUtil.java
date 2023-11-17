@@ -13,6 +13,7 @@
  */
 package org.moqui.impl.entity;
 
+import org.apache.commons.lang3.StringUtils;
 import org.moqui.BaseException;
 import org.moqui.context.ArtifactExecutionInfo;
 import org.moqui.entity.EntityCondition;
@@ -673,6 +674,13 @@ public class EntityJavaUtil {
         usv = underscored.toString();
         camelToUnderscoreMap.put(camelCase, usv);
         return usv;
+    }
+    public static String getTenantPrefix(String tenantId) {
+        if(tenantId == null || tenantId.isEmpty() || tenantId.equals("_NA_") ){
+            return "";
+        }
+        int hashCode = tenantId.hashCode();
+        return "P" + StringUtils.leftPad(Integer.toHexString(hashCode), 8, '0');
     }
     public static String underscoredToCamelCase(String underscored, boolean firstUpper) {
         if (underscored == null || underscored.length() == 0) return "";
