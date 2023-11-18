@@ -532,8 +532,11 @@ public abstract class EntityValueBase implements EntityValue {
     private String getTenantPrefix(List<String> fieldNames) {
         String tenantPrefix = "";
         for(String fName : fieldNames) {
-            String fValue = (String) valueMapInternal.get(fName);
-            if(fValue == null || fValue.isEmpty()) {
+            Object oFValue = valueMapInternal.get(fName);
+            if(!(oFValue instanceof String))
+                continue;
+            String fValue = (String) oFValue;
+            if(fValue.isEmpty()) {
                 continue;
             }
             if(fValue.length() > 9 && fValue.startsWith("P")) {
