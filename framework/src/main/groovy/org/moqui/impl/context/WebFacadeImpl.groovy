@@ -23,6 +23,7 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory
 import org.apache.commons.fileupload.servlet.ServletFileUpload
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.output.StringBuilderWriter
+import org.apache.commons.lang3.StringUtils
 import org.moqui.context.*
 import org.moqui.context.MessageFacade.MessageInfo
 import org.moqui.entity.EntityNotFoundException
@@ -202,13 +203,70 @@ class WebFacadeImpl implements WebFacade {
         // create the session token if needed (protection against CSRF/XSRF attacks; see ScreenRenderImpl)
         String sessionToken = session.getAttribute("moqui.session.token")
         if (sessionToken == null || sessionToken.length() == 0) {
-            sessionToken = StringUtilities.getRandomString(20)
+            sessionToken = createTenantSessionToken(request) ?: StringUtilities.getRandomString(20) //Gleecy
             session.setAttribute("moqui.session.token", sessionToken)
             request.setAttribute("moqui.session.token.created", "true")
             response.setHeader("moquiSessionToken", sessionToken)
             response.setHeader("X-CSRF-Token", sessionToken)
         }
     }
+
+    //Gleecy:
+    /**
+     * Gleecy needs a unique way to get client IP: Get Client IP in FO and BO must return the same result for the same client
+     */
+    private int hash(int oriHash, String msg) {
+        byte[] bytes = msg.getBytes();
+        int h = oriHash;
+        for (byte v : bytes) {
+            h = (h << 4) - h + (v & 0xff);
+        }
+        return h;
+    }
+    private static final String[] HEADERS_TO_TRY = new String[] {
+            "X-Forwarded-For",
+            "Proxy-Client-IP",
+        "WL-Proxy-Client-IP",
+        "HTTP_X_FORWARDED_FOR",
+        "HTTP_X_FORWARDED",
+        "HTTP_X_CLUSTER_CLIENT_IP",
+        "HTTP_CLIENT_IP",
+        "HTTP_FORWARDED_FOR",
+        "HTTP_FORWARDED",
+        "HTTP_VIA",
+        "REMOTE_ADDR" };
+
+    private String getClientIp(HttpServletRequest request) {
+        for (String header : HEADERS_TO_TRY) {
+            String ip = request.getHeader(header);
+            if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
+                return ip;
+            }
+        }
+        return request.getRemoteAddr();
+    }
+    private String createTenantSessionToken(HttpServletRequest request) {
+        String storeId = request.getHeader("store")
+        String clientIp = getClientIp(request)
+        if(storeId == null || clientIp == null) {
+            return null;
+        }
+        EntityValue store = eci.getEntity().fastFindOne("ProductStore", true, true, storeId)
+        if(store == null) {
+            logger.error("Cannot find store with ID " + storeId)
+            return null;
+        }
+        String secretKey = store.getNoCheckSimple("secretKey")
+        if(secretKey == null) {
+            logger.error("Cannot find secret key of store with ID " + storeId)
+            return null;
+        }
+        int hashVal = hash(0, secretKey)
+        hashVal = hash(hashVal, storeId)
+        hashVal = hash(hashVal, clientIp)
+        return StringUtils.leftPad(Integer.toHexString(hashVal), 8, '0');
+    }
+    //Gleecy
 
     /** Apache Commons FileUpload does not support string array so when using multiple select and there's a duplicate
      * fieldName convert value to an array list when fieldName is already in multipart parameters. */

@@ -543,6 +543,8 @@ public abstract class EntityValueBase implements EntityValue {
                 tenantPrefix = fValue.substring(0, 9);
                 break;
             }
+            //else: not start with "P" and is a FK to Party table
+            //      => ID of a Tenant :
             if (fName.equals("ownerPartyId")
                     || fName.equals("partyId")
                     || fName.equals("organizationPartyId") ) {
