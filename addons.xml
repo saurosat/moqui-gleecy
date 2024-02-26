@@ -98,7 +98,7 @@
 
     <!-- Gleecy components -->
     <component name="gleecy-import" group="saurosat" version="" branch="master"/><!-- no releases -->
-    <component name="gleecy-foi" group="saurosat" version="" branch="master"/><!-- no releases -->
+    <component name="foi" group="saurosat" version="" branch="main"/><!-- no releases -->
 
     <!-- Component Sets -->
     <!-- NOTE: using these component sets is NOT recommended, with so many components doing
