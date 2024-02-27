@@ -65,6 +65,7 @@ https://logging.apache.org/log4j/2.x/manual/layouts.html#PatternLayout
         <Logger name="org.moqui.impl.entity.EntityQueryBuilder" level="${sys:moqui.logger.level.entity_query}"/>
 
         <Logger name="org.moqui" level="info"/>
+        <Logger name="io.gleecy" level="debug"/>
 
         <Root level="info"><AppenderRef ref="AsyncLog"/></Root>
     </Loggers>
