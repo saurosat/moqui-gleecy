@@ -1446,6 +1446,52 @@ public abstract class EntityValueBase implements EntityValue {
     }
 
     private void checkSetFieldDefaults(EntityDefinition ed, ExecutionContext ec, Boolean pks) {
+        //Gleecy:
+        EntityDefinition thisEd = getEntityDefinition();
+        FieldInfo fi = thisEd.getFieldInfo("ownerPartyId");
+        if(fi != null) {
+            Object curVal = null;
+            if (valueMapInternal.containsKeyIString(fi.name, fi.index)) {
+                curVal = valueMapInternal.getByIString(fi.name, fi.index);
+            }
+            if (ObjectUtilities.isEmpty(curVal) || "_NA_".equalsIgnoreCase((String) curVal)) {
+                String tenantId = ec.getUser().getTenantId();
+                if(tenantId != null && !tenantId.isEmpty()) {
+                    valueMapInternal.putByIString(fi.name, tenantId, fi.index);
+                } else if(thisEd.fullEntityName.equals("mantle.party.Party")){
+                    String partyId = (String) this.getNoCheckSimple("partyId");
+                    if(!"_NA_".equalsIgnoreCase(partyId)) {
+                        String partyType = (String) this.getNoCheckSimple("partyTypeEnumId");
+                        if (partyType == null || partyType.equals("PtyPerson")) {
+                            FieldInfo fiDisabled = getEntityDefinition().getFieldInfo("disabled");
+                            if (fiDisabled != null) {
+                                valueMapInternal.putByIString(fiDisabled.name, "Y", fiDisabled.index);
+                            }
+                        }
+                    }
+                }
+            }
+        } else if(thisEd.fullEntityName.equals("moqui.security.UserAccount")){
+            FieldInfo fiDisabled = thisEd.getFieldInfo("disabled");
+            Object disabled = valueMapInternal.containsKeyIString(fiDisabled.name, fiDisabled.index)
+                    ? valueMapInternal.getByIString(fiDisabled.name, fiDisabled.index) : null;
+            if(disabled == null || disabled.equals("N") || disabled.equals("'N'")) {
+                EntityValue party = null;
+                FieldInfo fiParty = thisEd.getFieldInfo("partyId");
+                if(fiParty != null && valueMapInternal.containsKeyIString(fiParty.name, fiParty.index)) {
+                    Object partyId = valueMapInternal.getByIString(fiParty.name, fiParty.index);
+                    if(!ObjectUtilities.isEmpty(partyId)) {
+                        party = getEntityFacadeImpl().fastFindOne("mantle.party.Party",
+                                true, true, partyId);
+                    }
+                }
+                if(party != null) {
+                    valueMapInternal.putByIString(fiDisabled.name,
+                            party.getNoCheckSimple("disabled"), fiDisabled.index);
+                }
+            }
+        }
+        //--End Gleecy
         // allow updating a record without specifying default PK fields, so don't check this: if (isCreate) {
         Map<String, String> pkDefaults = ed.entityInfo.pkFieldDefaults;
         if ((pks == null || pks) && pkDefaults != null && pkDefaults.size() > 0) for (Entry<String, String> entry : pkDefaults.entrySet())
