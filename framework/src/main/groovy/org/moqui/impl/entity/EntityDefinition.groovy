@@ -1194,19 +1194,73 @@ class EntityDefinition {
         }
     }
 
+    private Map<String, RelationshipInfo> colToRelMap = null;
+    Map<String, RelationshipInfo> getColToRelMap() {
+        if(colToRelMap != null) return colToRelMap;
+        ArrayList<RelationshipInfo> relInfos = getRelationshipsInfo(false)
+        colToRelMap = new HashMap<>(relInfos.size());
+        for(RelationshipInfo relInfo : relInfos) {
+            if (!relInfo.isTypeOne) continue;
+            for(String fieldName : relInfo.keyFieldList) {
+                colToRelMap.put(fieldName, relInfo);
+            }
+        }
+        return colToRelMap;
+    }
     List<String> getAllRel1Fields() {
         return getAllRel1Fields(false)
     }
     List<String> getAllRel1Fields(boolean privateOnly) {
         ArrayList<String> relFields = new ArrayList<>();
-        ArrayList<RelationshipInfo> relInfos = getRelationshipsInfo(false)
-        for(RelationshipInfo relInfo : relInfos) {
-            if(!relInfo.isTypeOne) continue
-            if(privateOnly && relInfo.relatedEntityName.startsWith("moqui")) continue
-            relFields.addAll(relInfo.keyFieldList)
-        }
+        Map<String, RelationshipInfo> relMap = getColToRelMap();
+        relMap.forEach((k, v) -> {
+            if(!privateOnly || !v.relatedEntityName.startsWith("moqui"))
+                relFields.add(k);
+        });
         return relFields
     }
+    List<BasicJoinCondition> getPrefixConditions(String tenantId) {
+        List<BasicJoinCondition> conditions = new ArrayList<>()
+        if(tenantId == null || tenantId.isBlank() || this.getFullEntityName().startsWith("moqui")) {
+            return conditions;
+        }
+
+        Map<String, RelationshipInfo> colToRelMap = this.getColToRelMap();
+        String tenantPrefix = EntityJavaUtil.getTenantPrefix(tenantId) + "%"
+
+        FieldInfo pkField = null;
+        ArrayList<String> pkFieldNames = this.getPkFieldNames();
+        if(pkFieldNames.size() == 1) {
+            pkField = this.getFieldInfo(pkFieldNames.get(0));
+        } else {
+            for(String pkFieldName : this.getPkFieldNames()) {
+                FieldInfo pk = this.getFieldInfo(pkFieldName)
+                if (pk.type == "id") {
+                    RelationshipInfo relInfo = colToRelMap.get(pkFieldName);
+                    if (relInfo != null && !relInfo.relatedEntityName.startsWith("moqui")) {
+                        pkField = pk;
+                        break; //found pkField
+                    }
+                }
+            }
+        }
+        if(pkField == null) {
+            return conditions;
+        }
+
+        ConditionField condField = new ConditionField(pkField)
+        EntityCondition prefixedCondition = new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix);
+        if(entityName == "mantle.party.Party" || entityName == "mantle.party.Organization" || entityName == "mantle.party.Person") {
+            conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.EQUALS, tenantId),
+                    JoinOperator.OR, prefixedCondition));
+        } else {
+            //Tenant-private entities have ID start with 'P':
+            conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.NOT_LIKE, "P%"),
+                    JoinOperator.OR, prefixedCondition));
+        }
+        return conditions;
+    }
+
 
     @Override
     int hashCode() { return this.fullEntityName.hashCode() }

@@ -120,33 +120,8 @@ abstract class EntityFindBase implements EntityFind {
      * Allow
      */
     List<BasicJoinCondition> getPrefixConditions(EntityDefinition entityDef) {
-        List<BasicJoinCondition> conditions = new ArrayList<>()
-        if(entityDef.getFullEntityName().startsWith("moqui")) {
-            return conditions;
-        }
         UserFacade userFacade = efi.ecfi.getEci().getUser()
-        String tenantId = userFacade.getTenantId()
-        if(tenantId == null || tenantId.isBlank()) {
-            return conditions;
-        }
-        String tenantPrefix = EntityJavaUtil.getTenantPrefix(tenantId) + "%"
-        for(String pkFieldName : entityDef.getPkFieldNames()) {
-            FieldInfo pkField = entityDef.getFieldInfo(pkFieldName)
-            if(pkField.type != "id") {
-                continue
-            }
-            ConditionField condField = new ConditionField(pkField)
-            EntityCondition prefixedCondition = new FieldValueCondition(condField, EntityCondition.LIKE, tenantPrefix);
-            if(entityName == "mantle.party.Party" || entityName == "mantle.party.Organization" || entityName == "mantle.party.Person") {
-                conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.EQUALS, tenantId),
-                        EntityCondition.JoinOperator.OR, prefixedCondition));
-            } else {
-                //Tenant-private entities have ID start with 'P':
-                conditions.add(new BasicJoinCondition(new FieldValueCondition(condField, EntityCondition.NOT_LIKE, "P%"),
-                        EntityCondition.JoinOperator.OR, prefixedCondition));
-            }
-        }
-        return conditions;
+        return entityDef.getPrefixConditions(userFacade.getTenantId());
     }
 
     @Override EntityFind entity(String name) { entityName = name; return this }
