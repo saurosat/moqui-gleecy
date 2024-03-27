@@ -6,6 +6,9 @@ build
 # build generated files
 /moqui*.war
 /Save*.zip
+*.class
+*.jar
+*.bin
 
 # runtime directory (separate repository so ignore directory entirely)
 /runtime
@@ -55,3 +58,4 @@ Desktop.ini
 
 # Linux auto files
 *~
+/runtime/component/gleecy-import/build/classes/java/main/io/gleecy/parser/BaseParser$2.class
