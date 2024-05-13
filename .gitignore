@@ -59,3 +59,4 @@ Desktop.ini
 # Linux auto files
 *~
 /runtime/component/gleecy-import/build/classes/java/main/io/gleecy/parser/BaseParser$2.class
+/runtime/component/gleecy-import/build/
