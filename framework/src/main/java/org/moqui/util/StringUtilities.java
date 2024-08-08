@@ -14,6 +14,7 @@
 package org.moqui.util;
 
 import org.apache.commons.codec.binary.*;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.moqui.BaseException;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.util.*;
@@ -608,5 +610,30 @@ public class StringUtilities {
             default:
                 return false;
         }
+    }
+    /**
+     * For Gleecy
+     * @param oriHash
+     * @param msg
+     * @return hash number
+     */
+    public static int hash(int oriHash, String msg) {
+        char[] cs = msg.toCharArray();
+        int h = oriHash;
+        for (int i = 0; i < cs.length; i++) {
+            char c = cs[i];
+            byte v = (byte) (c & 0xffff);
+            h = (h*31 + v) & 0x7fffffff;
+            //System.out.println("round "+i+": v = "+v+", h = "+h);
+        }
+        return h;
+    }
+    public static void main(String[] args) {
+        System.out.println(('Á'&0x7fff));
+        String storeId = "P56586a9f100000", secretKey = "ABCD1234", clientIp = "127.0.0.1";
+        int hashVal = StringUtilities.hash(0, secretKey);
+        hashVal = StringUtilities.hash(hashVal, storeId);
+        hashVal = StringUtilities.hash(hashVal, clientIp);
+        System.out.println(Integer.toHexString(hashVal));
     }
 }

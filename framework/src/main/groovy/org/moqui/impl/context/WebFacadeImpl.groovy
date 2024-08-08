@@ -203,11 +203,15 @@ class WebFacadeImpl implements WebFacade {
         // create the session token if needed (protection against CSRF/XSRF attacks; see ScreenRenderImpl)
         String sessionToken = session.getAttribute("moqui.session.token")
         if (sessionToken == null || sessionToken.length() == 0) {
-            sessionToken = createTenantSessionToken(request) ?: StringUtilities.getRandomString(20) //Gleecy
+            sessionToken = createTenantSessionToken(request) //Gleecy
+            if(sessionToken == null) {
+                sessionToken = StringUtilities.getRandomString(20)
+                response.setHeader("moquiSessionToken", sessionToken)
+                response.setHeader("X-CSRF-Token", sessionToken)
+                request.setAttribute("moqui.session.token.created", "true")
+            }
+            //Tenant token is sent from client side, hence no need to set it in response header
             session.setAttribute("moqui.session.token", sessionToken)
-            request.setAttribute("moqui.session.token.created", "true")
-            response.setHeader("moquiSessionToken", sessionToken)
-            response.setHeader("X-CSRF-Token", sessionToken)
         }
     }
 
@@ -215,14 +219,7 @@ class WebFacadeImpl implements WebFacade {
     /**
      * Gleecy needs a unique way to get client IP: Get Client IP in FO and BO must return the same result for the same client
      */
-    private int hash(int oriHash, String msg) {
-        byte[] bytes = msg.getBytes();
-        int h = oriHash;
-        for (byte v : bytes) {
-            h = (h << 4) - h + (v & 0xff);
-        }
-        return h;
-    }
+
     private static final String[] HEADERS_TO_TRY = new String[] {
             "X-Forwarded-For",
             "Proxy-Client-IP",
@@ -237,18 +234,22 @@ class WebFacadeImpl implements WebFacade {
         "REMOTE_ADDR" };
 
     private String getClientIp(HttpServletRequest request) {
-        for (String header : HEADERS_TO_TRY) {
+       /* for (String header : HEADERS_TO_TRY) {
             String ip = request.getHeader(header);
             if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
                 return ip;
             }
         }
-        return request.getRemoteAddr();
+        return request.getRemoteAddr();*/
+        return UserFacadeImpl.getClientIp(request, null, this.eci.ecfi)
     }
     private String createTenantSessionToken(HttpServletRequest request) {
         String storeId = request.getHeader("store")
-        String clientIp = getClientIp(request)
-        if(storeId == null || clientIp == null) {
+        if(storeId == null) {
+            return null;
+        }
+        String clientIp = UserFacadeImpl.getClientIp(request, null, this.eci.ecfi) //getClientIp(request)
+        if(clientIp == null) {
             return null;
         }
         EntityValue store = eci.getEntity().fastFindOne("ProductStore", true, true, storeId)
@@ -261,9 +262,13 @@ class WebFacadeImpl implements WebFacade {
             logger.error("Cannot find secret key of store with ID " + storeId)
             return null;
         }
-        int hashVal = hash(0, secretKey)
-        hashVal = hash(hashVal, storeId)
-        hashVal = hash(hashVal, clientIp)
+
+        getSessionAttributes().put("productStoreId", storeId)
+        logger.info("storeId = " + storeId +", secretKey = " + secretKey + ", clientIp = " + clientIp)
+        // session.setAttribute("productStoreId", storeId)
+        int hashVal = StringUtilities.hash(0, secretKey)
+        hashVal = StringUtilities.hash(hashVal, storeId)
+        hashVal = StringUtilities.hash(hashVal, clientIp)
         return StringUtils.leftPad(Integer.toHexString(hashVal), 8, '0');
     }
     //Gleecy
@@ -568,6 +573,7 @@ class WebFacadeImpl implements WebFacade {
         }
         // remake sessionAttributes to use newSession
         sessionAttributes = new WebUtilities.AttributeContainerMap(new WebUtilities.HttpSessionContainer(newSession))
+        logger.info("Assigned new sessionAttributes in makeNewSession()")
 
         // UserFacadeImpl keeps a session reference, update it
         if (eci.userFacade != null) eci.userFacade.session = newSession
@@ -579,6 +585,7 @@ class WebFacadeImpl implements WebFacade {
     @Override Map<String, Object> getSessionAttributes() {
         if (sessionAttributes != null) return sessionAttributes
         sessionAttributes = new WebUtilities.AttributeContainerMap(new WebUtilities.HttpSessionContainer(getSession()))
+        logger.info("Assigned new sessionAttributes getSessionAttributes() ")
         return sessionAttributes
     }
 

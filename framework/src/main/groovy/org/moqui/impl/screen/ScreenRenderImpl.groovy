@@ -405,6 +405,7 @@ class ScreenRenderImpl implements ScreenRender {
         ScreenDefinition.TransitionItem targetTransition = screenUrlInstance.getTargetTransition()
         // logger.warn("============ Rendering screen ${screenUrlInfo.getTargetScreen().getLocation()} transition ${screenUrlInfo.getTargetTransitionActualName()} has transition ${targetTransition != null}")
         if (targetTransition != null) {
+            logger.info("targetTransition != null")
             // if this transition has actions and request was not secure or any parameters were not in the body
             // return an error, helps prevent CSRF/XSRF attacks
             if (request != null && targetTransition.hasActionsOrSingleService()) {
@@ -432,13 +433,22 @@ class ScreenRenderImpl implements ScreenRender {
                             request.getHeader("SessionToken") ?: request.getHeader("X-CSRF-Token")
 
                     String curToken = ec.web.getSessionToken()
-                    if (curToken != null && curToken.length() > 0) {
-                        if (passedToken == null || passedToken.length() == 0) {
-                            throw new AuthenticationRequiredException("Session token required (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
-                        } else if (!curToken.equals(passedToken)) {
-                            throw new AuthenticationRequiredException("Session token does not match (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
-                        }
+                    logger.info("passedToken = " + (passedToken ?: "null; ") + "curToken = " + (curToken ?: "null"))
+//                    if (curToken != null && curToken.length() > 0) { //TODO: is this a bug? Gleecy
+//                        if (passedToken == null || passedToken.length() == 0) {
+//                            throw new AuthenticationRequiredException("Session token required (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
+//                        } else if (!curToken.equals(passedToken)) {
+//                            throw new AuthenticationRequiredException("Session token does not match (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
+//                        }
+//                    }
+                    //Gleecy: prevent the case user remove jSessionID before submitting
+                    if (curToken == null || curToken.length() == 0 || passedToken == null || passedToken.length() == 0) {
+                        throw new AuthenticationRequiredException("Session token required (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
+                    } else if (!curToken.equals(passedToken)) {
+                        throw new AuthenticationRequiredException("Session token does not match (in X-CSRF-Token) for URL ${screenUrlInstance.url}")
                     }
+                } else {
+                    logger.info("Check token ignored: webappInfo != null: " + (webappInfo != null) + ", webappInfo.requireSessionToken:" + webappInfo.requireSessionToken + ", targetTransition.getRequireSessionToken(): " + targetTransition.getRequireSessionToken() + ", request.session.token.created=" + request.getAttribute("moqui.session.token.created"))
                 }
             }
 
@@ -609,6 +619,7 @@ class ScreenRenderImpl implements ScreenRender {
                 internalRender()
             }
         } else if (screenUrlInfo.fileResourceRef != null) {
+            logger.info("screenUrlInfo.fileResourceRef != null")
             ResourceReference fileResourceRef = screenUrlInfo.fileResourceRef
 
             long resourceStartTime = System.currentTimeMillis()
