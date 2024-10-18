@@ -302,6 +302,11 @@ class EntityCache {
                     // handle cases where current record (evbMap) has some keys from view-entity but not all (like UserPermissionCheck)
                     Map<String, Object> viewMatchMap = new HashMap<>()
                     Map<String, ArrayList<MNode>> memberFieldAliases = viewEd.getMemberFieldAliases(fullEntityName)
+                    //Gleecy: fix NPE - BEGIN
+                    if(memberFieldAliases == null) {
+                        continue
+                    }
+                    //Gleecy: fix NPE - END
                     for (Map.Entry<String, ArrayList<MNode>> mfAliasEntry in memberFieldAliases.entrySet()) {
                         String fieldName = mfAliasEntry.getKey()
                         if (!evbMap.containsKey(fieldName)) continue
