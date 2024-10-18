@@ -40,6 +40,7 @@ import java.security.SecureRandom;
 import java.util.*;
 
 public class EntityJavaUtil {
+    public final static String TENANT_KEY_PREFIX = "p";
     protected final static Logger logger = LoggerFactory.getLogger(EntityJavaUtil.class);
     protected final static boolean isTraceEnabled = logger.isTraceEnabled();
 
@@ -680,7 +681,7 @@ public class EntityJavaUtil {
             return "";
         }
         int hashCode = tenantId.hashCode();
-        return "P" + StringUtils.leftPad(Integer.toHexString(hashCode), 8, '0');
+        return TENANT_KEY_PREFIX + StringUtils.leftPad(Integer.toHexString(hashCode), 8, '0');
     }
     public static String underscoredToCamelCase(String underscored, boolean firstUpper) {
         if (underscored == null || underscored.length() == 0) return "";
