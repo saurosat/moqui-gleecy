@@ -204,14 +204,14 @@ class WebFacadeImpl implements WebFacade {
         String sessionToken = session.getAttribute("moqui.session.token")
         if (sessionToken == null || sessionToken.length() == 0) {
             sessionToken = createTenantSessionToken(request) //Gleecy
+            //Tenant token is sent from client side, hence no need to set it in response header
             if(sessionToken == null) {
                 sessionToken = StringUtilities.getRandomString(20)
                 response.setHeader("moquiSessionToken", sessionToken)
                 response.setHeader("X-CSRF-Token", sessionToken)
-                request.setAttribute("moqui.session.token.created", "true")
             }
-            //Tenant token is sent from client side, hence no need to set it in response header
             session.setAttribute("moqui.session.token", sessionToken)
+            request.setAttribute("moqui.session.token.created", "true")
         }
     }
 
@@ -262,9 +262,16 @@ class WebFacadeImpl implements WebFacade {
             logger.error("Cannot find secret key of store with ID " + storeId)
             return null;
         }
+        String organizationPartyId = store.getNoCheckSimple("organizationPartyId")
+        if(secretKey == null) {
+            logger.error("Cannot find organizationPartyId of store with ID " + storeId)
+            return null;
+        }
 
-        getSessionAttributes().put("productStoreId", storeId)
-        logger.info("storeId = " + storeId +", secretKey = " + secretKey + ", clientIp = " + clientIp)
+        Map<String, Object> sessionAttributes = getSessionAttributes()
+        sessionAttributes.put("productStoreId", storeId)
+        sessionAttributes.put("organizationPartyId", organizationPartyId)
+        logger.info("organizationPartyId = " + organizationPartyId + ", storeId = " + storeId +", secretKey = " + secretKey + ", clientIp = " + clientIp)
         // session.setAttribute("productStoreId", storeId)
         int hashVal = StringUtilities.hash(0, secretKey)
         hashVal = StringUtilities.hash(hashVal, storeId)
