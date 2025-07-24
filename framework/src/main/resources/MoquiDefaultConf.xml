@@ -12,8 +12,8 @@
 
     <!-- Locale and Time Zone Properties -->
     <default-property name="default_locale" value="en_US"/>
-    <default-property name="default_time_zone" value="US/Pacific"/>
-    <default-property name="database_time_zone" value="US/Pacific"/>
+    <default-property name="default_time_zone" value="Asia/Ho_Chi_Minh"/>
+    <default-property name="database_time_zone" value="Asia/Ho_Chi_Minh"/>
 
     <!-- Web App Properties -->
     <default-property name="webapp_http_host" value=""/>
@@ -42,14 +42,19 @@
     <default-property name="webapp_client_ip_header" value=""/>
 
     <!-- Properties for the primary (transactional group) datasource -->
+<!--    <default-property name="entity_ds_db_conf" value="h2"/>-->
     <default-property name="entity_ds_db_conf" value="h2"/>
     <default-property name="entity_ds_host" value="127.0.0.1"/>
+<!--    <default-property name="entity_ds_port" value=""/>-->
+<!--    <default-property name="entity_ds_database" value="moqui"/>-->
+<!--    <default-property name="entity_ds_url" value="jdbc:h2:${moqui_runtime}/db/h2/${entity_ds_database};lock_timeout=30000"/>-->
     <default-property name="entity_ds_port" value=""/>
     <default-property name="entity_ds_database" value="moqui"/>
     <default-property name="entity_ds_url" value="jdbc:h2:${moqui_runtime}/db/h2/${entity_ds_database};lock_timeout=30000"/>
     <default-property name="entity_ds_schema" value=""/>
-    <default-property name="entity_ds_user" value="sa"/>
-    <default-property name="entity_ds_password" value="sa" is-secret="true"/>
+    <default-property name="entity_ds_user" value="eiadmin"/>
+    <default-property name="entity_ds_password" value="eiadmin" is-secret="true"/>
+<!--    <default-property name="entity_ds_url" value="postgresql://${entity_ds_user}:${entity_ds_password}@127.0.0.1/${entity_ds_database};lock_timeout=30000;sslmode=prefer"/>-->
     <default-property name="entity_ds_crypt_pass" value="MoquiDefaultPassword:CHANGEME" is-secret="true"/>
     <default-property name="entity_ds_crypt_pass_old" value="MoquiDefaultPassword:CHANGEME" is-secret="true"/>
     <default-property name="entity_add_missing_runtime" value="false"/>

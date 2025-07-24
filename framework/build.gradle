@@ -120,7 +120,8 @@ dependencies {
 
     // H2 Database
     api 'com.h2database:h2:2.2.220' // MPL 2.0, EPL 1.0
-
+    // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    implementation("org.postgresql:postgresql:42.7.5")
     // Java Specifications
     api 'javax.transaction:jta:1.1'
     api 'javax.cache:cache-api:1.1.1'
@@ -210,10 +211,11 @@ dependencies {
     execWarRuntimeOnly 'org.eclipse.jetty:jetty-webapp:10.0.15' // Apache 2.0
     execWarRuntimeOnly 'org.eclipse.jetty:jetty-jndi:10.0.15' // Apache 2.0
     execWarRuntimeOnly 'org.eclipse.jetty.websocket:websocket-javax-server:10.0.15' // Apache 2.0
-    execWarRuntimeOnly ('org.eclipse.jetty.websocket:websocket-javax-client:10.0.15') { // Apache 2.0
-        exclude group: 'javax.websocket' } // we have the full websocket API, including the client one causes problems
+    execWarRuntimeOnly('org.eclipse.jetty.websocket:websocket-javax-client:10.0.15') { // Apache 2.0
+        exclude group: 'javax.websocket'
+    } // we have the full websocket API, including the client one causes problems
     execWarRuntimeOnly 'javax.websocket:javax.websocket-api:1.1'
-    execWarRuntimeOnly ('org.eclipse.jetty.websocket:websocket-jetty-server:10.0.15') // Apache 2.0
+    execWarRuntimeOnly('org.eclipse.jetty.websocket:websocket-jetty-server:10.0.15') // Apache 2.0
     // only include this if using Endpoint and MessageHandler annotations:
     // execWarRuntime ('org.eclipse.jetty:jetty-annotations:10.0.15') // Apache 2.0
     execWarRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j18-impl:2.18.0'
@@ -255,7 +257,8 @@ jar {
     manifest { attributes 'Implementation-Title': 'Moqui Framework', 'Implementation-Version': version, 'Implementation-Vendor': 'Moqui Ecosystem' }
     from sourceSets.main.output
     // get all of the "resources" that are in component-standard directories instead of src/main/resources
-    from fileTree(dir: projectDir.absolutePath, includes: ['data/**', 'entity/**', 'screen/**', 'service/**', 'template/**']) // 'xsd/**'
+    from fileTree(dir: projectDir.absolutePath, includes: ['data/**', 'entity/**', 'screen/**', 'service/**', 'template/**'])
+    // 'xsd/**'
 }
 
 war {
@@ -274,12 +277,16 @@ war {
     from(files(configurations.execWarRuntimeClasspath)) { into 'execlib' }
     // TODO some sort of config for Jetty? from file(projectDir.absolutePath + '/jetty/jetty.xml')
     // setup the manifest for the executable war/jar mode
-    manifest { attributes 'Implementation-Title': 'Moqui Start', 'Implementation-Vendor': 'Moqui Ecosystem',
-            'Implementation-Version': version, 'Main-Class': 'MoquiStart' }
+    manifest {
+        attributes 'Implementation-Title': 'Moqui Start', 'Implementation-Vendor': 'Moqui Ecosystem',
+                'Implementation-Version': version, 'Main-Class': 'MoquiStart'
+    }
 }
 
-task copyDependencies { doLast {
-    delete file(projectDir.absolutePath + '/dependencies')
-    copy { from configurations.runtime; into file(projectDir.absolutePath + '/dependencies') }
-    copy { from configurations.testCompile; into file(projectDir.absolutePath + '/dependencies') }
-} }
+task copyDependencies {
+    doLast {
+        delete file(projectDir.absolutePath + '/dependencies')
+        copy { from configurations.runtime; into file(projectDir.absolutePath + '/dependencies') }
+        copy { from configurations.testCompile; into file(projectDir.absolutePath + '/dependencies') }
+    }
+}
